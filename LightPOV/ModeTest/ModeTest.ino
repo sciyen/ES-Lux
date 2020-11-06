@@ -1,3 +1,4 @@
+#include "core.h"
 #include "config.h"
 #include "modes.h"
 #include "communication.h"
@@ -36,6 +37,7 @@ void setup(){
 
 void LED_UPDATE_CODE(void *pvParameters)
 {
+    /*
     ValueParam p1 = (ValueParam){.func=FuncRamp, .range=100, .lower=0, .p1=250, .p2=0};
     ValueParam p2 = (ValueParam){.func=FuncConst, .range=1, .lower=0, .p1=100, .p2=0};
     ValueParam p3 = (ValueParam){.func=FuncConst, .range=1, .lower=0, .p1=0, .p2=0};
@@ -50,24 +52,38 @@ void LED_UPDATE_CODE(void *pvParameters)
     m.YS = p3;
     m.YV = p3;
     m.param[0] = 1;
-    m.param[1] = 10;
+    m.param[1] = 10;*/
     while (1){
-        effect.square(&m);
+        //effect.square(&m);
+        effect.perform();
     }
 }
 
 void WIFI_HANDLE_CODE(void *pvParameters)
 {
+    time_t last_check_time = millis();
     Serial.print("Task1 running on core ");
     Serial.println(xPortGetCoreID());
     while (1)
     {
-        /*if (Serial.available())
-        {
-            light_stat = Serial.parseInt();
+        uint8_t current_id = effect.checkBufferAvailable();
+        if (current_id >= 0){
+            Mode m;
+            if ( comm.receive(&m, current_id) ){
+                effect.feedNewEffect(&m);
+            }
+            #ifdef DEBUGGER_TASK_REPORT
+            else
+                Serial.println("Failed to receive from server");
+            #endif
         }
-        delay(10);*/
-        //get_data();
+
+        if (millis() - last_check_time > START_TIME_CHECK_INTERVAL){
+            Mode m;
+            effect.buffer.peek(&m);
+            effect.current_music_time = comm.check_start_time(LUX_ID, m.mode);
+            last_check_time = millis();
+        }
         delay(10);
     }
 }

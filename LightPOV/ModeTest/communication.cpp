@@ -117,28 +117,23 @@ void Communication::connect(){
 void Communication::feed_color_param(ValueParam* p, String s){
     int comma = s.indexOf(',');
     uint32_t upper = s.substring(0, comma).toInt();
-    p->func = (upper >> 16)    & 0xff;
-    p->XH.range = (upper >> 8) & 0xff;
-    p->XH.lower = upper        & 0xff;
+    p->func = (SchedulerFunc)((upper >> 16)    & 0xff);
+    p->range = (upper >> 8) & 0xff;
+    p->lower = upper        & 0xff;
     
     uint32_t lower = s.substring(comma+1).toInt();
-    p->XH.p1 = (lower >> 8) & 0xff;
-    p->XH.p2 = lower        & 0xff;
+    p->p1 = (lower >> 8) & 0xff;
+    p->p2 = lower        & 0xff;
 }
 
 int Communication::feed_data(Mode* m, String s){
     int start=0, len=0;
     uint32_t checksum = 0;
+    Serial.println(s);
     for (int i=0; i<s.length(); i++){
+        // If the first charactor is not `M`, return as error
+        if (i==0 && s[0] != 'M') return 1;
         if ((s[i] >= '0' && s[i] <= '9') || s[i] == ',') continue;
-        if (s[i] == ';'){
-            // Perform checksum and break
-            String meta = s.substring(start, i);
-            if (checksum & 0xff == meta.toInt())
-                return len-2;
-            else    // Checksum failed
-                return 0;
-        }
 
         // If there is multi times non-number charactor appearing, it
         // will skip them till next number comes
@@ -169,17 +164,28 @@ int Communication::feed_data(Mode* m, String s){
                 case 'U': feed_color_param(&(m->YH), meta);break;
                 case 'V': feed_color_param(&(m->YS), meta);break;
                 case 'W': feed_color_param(&(m->YV), meta);break;
-                case 'Z': 
+                case 'P': 
                     int comma = meta.indexOf(',');
                     uint32_t upper = meta.substring(0, comma).toInt();
-                    m->p[0] = (upper >> 8) & 0xff;
-                    m->p[1] = upper        & 0xff;
+                    m->param[0] = (upper >> 8) & 0xff;
+                    m->param[1] = upper        & 0xff;
                     
                     uint32_t lower = meta.substring(comma+1).toInt();
-                    m->p[2] = (lower) >> 8) & 0xff;
-                    m->p[3] = lower         & 0xff;
+                    m->param[2] = (lower >> 8)  & 0xff;
+                    m->param[3] = lower         & 0xff;
                     break;
             }
+        }
+        
+        if (s[i] == ';'){
+            /*
+            // Perform checksum and break
+            String meta = s.substring(start, i);
+            if (checksum & 0xff == meta.toInt())
+                return len-2;
+            else    // Checksum failed
+            */
+            return 0;
         }
         start = i+1;
     }
@@ -187,35 +193,94 @@ int Communication::feed_data(Mode* m, String s){
     return 0;
 }
 
-bool Communication::receive(Mode* m, int request_id){
+bool Communication::receive(Mode* m, int current_id){
     if (WiFi.status() == WL_CONNECTED){
         /* Request data from server */
-        String url = String(WIFI_REQUEST_URL) + "?id=" + request_id;
+        String url = String(WIFI_REQUEST_URL) + "?id=" + current_id;
         http.begin(url);
         int httpCode = http.GET();
         String web_data = http.getString();
 
-        if (feed_data(m, web_data) == 0){
+        Serial.print("\n\nnumber: ");
+        Serial.println(current_id);
+        if (feed_data(m, web_data) != 0){
             // Message error, Report it
+            return false;
         }
         http.end();
-
-        /* Report connection time */ 
-        url = WIFI_RESPOND_URL;
-        http.begin(url);
-        httpCode = http.GET();
-        http.end();
-    }
-    else{
-        #ifdef DEBUGGER
-        Serial.println("Connection Failed! Rebooting...");
+        #ifdef DEBUGGER_TASK_REPORT
+        PrintMode(m);
         #endif
-        delay(1000);
-        ESP.restart();
     }
+    else WifiErrorHandle();
     return true;
+}
+
+time_t Communication::check_start_time(uint8_t id, MODES mode){
+    if (WiFi.status() == WL_CONNECTED){
+        /* Request data from server */
+        String url = String(WIFI_TIME_CHECK_URL) + "?id=" + id + "&effect=" + mode;
+        http.begin(url);
+        int httpCode = http.GET();
+        String web_data = http.getString();
+        http.end();
+        return web_data.toInt();
+    }
+    else WifiErrorHandle();
+    return 0;
+}
+
+void Communication::WifiErrorHandle(){
+    #ifdef DEBUGGER
+    Serial.println("Connection Failed! Rebooting...");
+    #endif
+    delay(1000);
+    ESP.restart();
 }
 
 void Communication::updateOTA(){
     ArduinoOTA.handle();
+}
+
+void PrintColorSch(ValueParam* v){
+    Serial.print("  func:");
+    Serial.print(v->func);
+    Serial.print(", range:");
+    Serial.print(v->range);
+    Serial.print(", lower:");
+    Serial.print(v->lower);
+    Serial.print(", p1:");
+    Serial.print(v->p1);
+    Serial.print(", p2:");
+    Serial.println(v->p2);
+}
+
+void PrintMode(Mode* m){
+    Serial.print("Mode:");
+    Serial.print(m->mode);
+    Serial.print(", start:");
+    Serial.print(m->start_time);
+    Serial.print(", dur:");
+    Serial.println(m->duration);
+
+    Serial.print("XH: ");
+    PrintColorSch(&(m->XH));
+    Serial.print("XS: ");
+    PrintColorSch(&(m->XS));
+    Serial.print("XV: ");
+    PrintColorSch(&(m->XV));
+
+    Serial.print("YH: ");
+    PrintColorSch(&(m->YH));
+    Serial.print("YS: ");
+    PrintColorSch(&(m->YS));
+    Serial.print("YV: ");
+    PrintColorSch(&(m->YV));
+
+    Serial.println("Param:");
+    for (int i=0; i<META_PARAMETER_BUF_SIZE; i++){
+        Serial.print(m->param[i]);
+        Serial.print(", ");
+    }
+    Serial.println("");
 }

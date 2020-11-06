@@ -8,6 +8,9 @@
 #include "core.h"
 #include "config.h"
 
+void PrintColorSch(ValueParam* v);
+void PrintMode(Mode* m);
+
 class Communication{
 private:
 
@@ -15,7 +18,7 @@ private:
 
     /* Helper function to feed color parameter
      */
-    static void Communication::feed_color_param(ValueParam* p, String s);
+    static void feed_color_param(ValueParam* p, String s);
 
     /* Split the http get message into parameters
      * The accepted format: 
@@ -45,9 +48,14 @@ public:
     /* Send request to server and try to parse the message.
      * Return false if it failed.
      */
-    bool receive(Mode* m, int request_id);
+    bool receive(Mode* m, int current_id);
 
     void updateOTA();
+
+    /* Obtain current music time stamp and return current playing effect*/
+    time_t check_start_time(uint8_t id, MODES mode);
+
+    void WifiErrorHandle();
 };
 /*
 void wifi_connect();

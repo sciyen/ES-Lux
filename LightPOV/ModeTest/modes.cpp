@@ -8,7 +8,7 @@
  * +     +       lower
  * |range|
  */ 
-uint8_t ColorScheduler::calc_ramp(uint16_t idx, uint8_t range, uint8_t lower, uint8_t upper, bool overflow){
+uint16_t ColorScheduler::calc_ramp(uint16_t idx, uint8_t range, uint8_t lower, uint8_t upper, bool overflow){
     uint8_t mod = idx % range;
     int16_t output = lower + (uint16_t)mod * (upper - lower) / range;
     return (!overflow)?LIMIT_OUTPUT(output):output;
@@ -21,7 +21,7 @@ uint8_t ColorScheduler::calc_ramp(uint16_t idx, uint8_t range, uint8_t lower, ui
  * +     +      lower
  * |range|
  */ 
-uint8_t ColorScheduler::calc_tri(uint16_t idx, uint8_t range, uint8_t lower, uint8_t upper, bool overflow){
+uint16_t ColorScheduler::calc_tri(uint16_t idx, uint8_t range, uint8_t lower, uint8_t upper, bool overflow){
     uint8_t delta = upper - lower;
     uint8_t half = range / 2;
     int16_t mod = idx % range;
@@ -38,7 +38,7 @@ uint8_t ColorScheduler::calc_tri(uint16_t idx, uint8_t range, uint8_t lower, uin
  *      top: length of peak time
  * # TODO: the `lower` parameter is useless now
  */ 
-uint8_t ColorScheduler::calc_pulse(uint16_t idx, uint8_t range, uint8_t lower, uint8_t top){
+uint16_t ColorScheduler::calc_pulse(uint16_t idx, uint8_t range, uint8_t lower, uint8_t top){
     uint8_t mod = idx - (idx/range) * range;
     if (mod < top) return 0xff;
     uint16_t decay = (uint16_t)(idx - top) * 8 / range;
@@ -58,7 +58,7 @@ void ColorScheduler::SetYHsvParam(ValueParam H, ValueParam S, ValueParam V){
     YHp = H; YSp = S; YVp = V;
 }
 
-uint8_t ColorScheduler::getFuncValue(ValueParam* vp, uint16_t idx, bool overflow){
+uint16_t ColorScheduler::getFuncValue(ValueParam* vp, uint16_t idx, bool overflow){
     switch (vp->func){
         case FuncConst:
             return vp->p1;
@@ -83,16 +83,16 @@ void ColorScheduler::updateHeading(time_t now_time, time_t last_low_time, bool r
     headingColor.v = getFuncValue(&XVp, delta);
 }
 
-CHSV inline ColorScheduler::getPixelColor(uint8_t y){/*
+CRGB inline ColorScheduler::getPixelColor(uint8_t y){/*
     return CHSV(headingColor.h,
                 headingColor.s,
                 headingColor.v);*/
-    return CHSV(headingColor.h + getFuncValue(&YHp, y),
-                headingColor.s + getFuncValue(&YSp, y),
-                headingColor.v + getFuncValue(&YVp, y));
+    return CHSV(LIMIT_OUTPUT(headingColor.h + getFuncValue(&YHp, y)),
+                LIMIT_OUTPUT(headingColor.s + getFuncValue(&YSp, y)),
+                LIMIT_OUTPUT(headingColor.v + getFuncValue(&YVp, y)));
 }
 
-void ColorScheduler::getPixelColor(CHSV* pixels, uint32_t bitmap, CHSV replace){
+void ColorScheduler::getPixelColor(CRGB* pixels, uint32_t bitmap, CHSV replace){
     for( uint8_t i=0; i<NUMPIXELS; i++){
         if (bitmap & 1)
             pixels[i] = getPixelColor(i);
@@ -101,18 +101,37 @@ void ColorScheduler::getPixelColor(CHSV* pixels, uint32_t bitmap, CHSV replace){
     }
 }
 
-void ColorScheduler::getPixelColor(CHSV* pixels){
+void ColorScheduler::getPixelColor(CRGB* pixels){
     for( uint8_t i=0; i<NUMPIXELS; i++){
         pixels[i] = getPixelColor(i);
     }
 }
 
-Effects::Effects(){
-    FastLED.addLeds<WS2812B, PIN_LED, GRB>(rgb_pixels, NUMPIXELS);
+Effects::Effects():buffer(sizeof(Mode), QUEUE_SIZE, FIFO),
+    sch(millis(), 0){
+    effect_id = 0;
+    detector.init();
+    FastLED.addLeds<WS2812B, PIN_LED, GRB>(pixels, NUMPIXELS);
+}
+
+int16_t Effects::checkBufferAvailable(){
+    Serial.print("Capacity: ");
+    Serial.println(buffer.getCount());
+    if (buffer.isFull()) return -1;
+    return effect_id;     // Request for next effect
+}
+
+void Effects::feedNewEffect(Mode* m){
+    if (buffer.isFull()) return;
+    if (buffer.push(m) )
+        effect_id += 1;
+        Serial.println("Pushed");
+        if (effect_id >= 3)
+            effect_id = 0;
 }
 
 void inline Effects::showLED(){
-    hsv2rgb_rainbow(pixels, rgb_pixels, NUMPIXELS);
+    //hsv2rgb_rainbow(pixels, rgb_pixels, NUMPIXELS);
     FastLED.show();
 }
 
@@ -140,32 +159,63 @@ bool inline Effects::detectPassStart(time_t start){
     return false;
 }
 
+void Effects::perform(){
+    if (buffer.isEmpty()) return;
+    Mode m;
+    buffer.peek(&m);
+    if (m.start_time < current_music_time){
+        // Load new mode
+        buffer.pop(&m);
+        Serial.print("Now Performing: ");
+        Serial.println(m.mode);
+        switch(m.mode){
+            case MODES_SQUARE: square(&m); break;
+            case MODES_SICKLE: sickle(&m); break;
+            case MODES_FAN:    fan(&m);    break;
+        }
+    }
+}
+
+void Effects::setEffectStart(Mode* m){
+    time_idx = 0;
+    effect_entry_time = millis();
+    sch.effect_entry_time = effect_entry_time;
+    sch.SetXHsvParam(m->XH, m->XS, m->XV);
+    sch.SetYHsvParam(m->YH, m->YS, m->YV);
+}
+uint16_t Effects::getIdx(){
+    time_idx++;
+    return time_idx;
+}
+bool Effects::checkDuration(Mode* m){
+    return millis() - effect_entry_time < m->duration;
+    // ||
+    //    current_music_time > m->start_time + m->duration;
+}
 /*
  * param[0]: position_fix
  * param[1]: times
  */
 void Effects::square(Mode* m){
+    Serial.println("Square");
     uint8_t position_fix = m->param[0];
+    //uint8_t position_fix = 1;
     uint8_t times = m->param[1];
-    time_t now_time;
     uint32_t bitmap = 0b11001100110011001100110011001100;
-    ColorScheduler sch = ColorScheduler( millis() );
-    sch.SetXHsvParam(m->XH, m->XS, m->XV);
-    sch.SetYHsvParam(m->YH, m->YS, m->YV);
-    for (int i=0; i<times; i++){
+    setEffectStart(m);
+    while( checkDuration(m) ){
         for (int b=0; b<20; b++){
-            now_time = millis();
-            uint16_t idx = get_idx(now_time, sch.effect_entry_time, detector.interval);
+            uint16_t idx = getIdx();
             sch.updateHeading(idx, detector.last_low_time, position_fix);
             sch.getPixelColor(pixels);
-            
             /*
             Serial.print(sch.headingColor.h);
             Serial.print(",");
             Serial.print(sch.headingColor.s);
             Serial.print(",");
             Serial.print(sch.headingColor.v);
-            Serial.println(",");
+            Serial.println(",");*/
+            /*
             for (int a=0; a<NUMPIXELS; a++){
                 Serial.print(rgb_pixels[a].r);
                 Serial.print("|");
@@ -175,67 +225,66 @@ void Effects::square(Mode* m){
                 Serial.print(",");
             }
                 Serial.println(",");*/
-/*
+            /*
             if ( (now_time-sch.effect_entry_time) & 0x10 )
                 sch.getPixelColor(pixels, bitmap, CHSV(0, 0, 0));
             else
                 sch.getPixelColor(pixels, bitmap>>2, CHSV(0, 0, 0));*/
             showLED();
         }
-        if (position_fix)
+        if (position_fix){
+            FastLED.clear();
+            FastLED.show();
             blockUntilStart(0, 1000);
+        }
+    }
+}
+
+void Effects::sickle(Mode* m){
+    Serial.println("Sickle");
+    uint8_t position_fix = m->param[0];
+    uint8_t width = m->param[2];
+    setEffectStart(m);
+    while( checkDuration(m) ){
+        FastLED.clear();
+        for (int b=1; b<width; b++){
+            uint16_t idx = getIdx();
+            sch.updateHeading(idx, detector.last_low_time, position_fix);
+            uint8_t led_idx = NUMPIXELS * b / width;
+            for (int l=(NUMPIXELS * (b-1) / width); l < NUMPIXELS * b / width; l++)
+                pixels[l] = sch.getPixelColor(l);
+            showLED();
+        }
+    }
+}
+
+void Effects::fan(Mode* m){
+    Serial.println("Sickle");
+    uint8_t times = m->param[1];
+    uint8_t width = m->param[0];
+    uint8_t density = m->param[2];
+    uint8_t thickness = m->param[3];
+    setEffectStart(m);
+    while( checkDuration(m) ){
+        for (int w=0; w<width; w++){
+            uint16_t idx = getIdx();
+            sch.updateHeading(idx, detector.last_low_time, false);
+
+            FastLED.clear();
+            uint8_t led_idx = (NUMPIXELS * w / width) % density;
+            for (int d=0; d<=NUMPIXELS/density; d++){
+                for (int t=0; t<thickness; t++){
+                    uint16_t lidx = led_idx + d * density + t;
+                    if (lidx < NUMPIXELS)
+                    pixels[lidx] = sch.getPixelColor(idx);
+                }
+            }
+            showLED();
+        }
     }
 }
 /*
-void Effects::sickle() //鐮刀 101
-{
-    if (count == 0)
-    {
-        FastLED.clear();
-    }
-    if (count % SPEED == 0)
-    {
-        pixels[sickle_i - 1] = CRGB(COLOR[0], COLOR[1], COLOR[2]);
-        //pixels.setPixelColor(sickle_i - 1, pixels.Color(COLOR[0] * BRIGHTNESS / 100.0, COLOR[1] * BRIGHTNESS / 100.0, COLOR[2] * BRIGHTNESS / 100.0));
-        FastLED.show();
-        pixels[sickle_i + sickle_temp] = CRGB(COLOR[0], COLOR[1], COLOR[2]);
-        //pixels.setPixelColor(sickle_i + sickle_temp, pixels.Color(COLOR[0] * BRIGHTNESS / 100.0, COLOR[1] * BRIGHTNESS / 100.0, COLOR[2] * BRIGHTNESS / 100.0));
-        FastLED.show();
-        sickle_temp += 2;
-        if (sickle_i == 0)
-        {
-            count = -SPEED;
-            sickle_i = NUMPIXELS / 2 + 1;
-            sickle_temp = 0;
-        }
-        sickle_i--;
-    }
-    count++;
-}
 
-void reverse_sickle() //反向鐮刀 111
-{
-    if (count == 0)
-    {
-        FastLED.clear();
-    }
-    if (count % SPEED == 0)
-    {
-        pixels[reverse_sickle_i] = CRGB(COLOR[0], COLOR[1], COLOR[2]);
-        //pixels.setPixelColor(reverse_sickle_i, pixels.Color(COLOR[0] * BRIGHTNESS / 100.0, COLOR[1] * BRIGHTNESS / 100.0, COLOR[2] * BRIGHTNESS / 100.0));
-        FastLED.show();
-        pixels[NUMPIXELS - 1 - reverse_sickle_i] = CRGB(COLOR[0], COLOR[1], COLOR[2]);
-        //pixels.setPixelColor(NUMPIXELS - 1 - reverse_sickle_i, pixels.Color(COLOR[0] * BRIGHTNESS / 100.0, COLOR[1] * BRIGHTNESS / 100.0, COLOR[2] * BRIGHTNESS / 100.0));
-        FastLED.show();
-        if (reverse_sickle_i == NUMPIXELS / 2 - 1)
-        {
-            count = -SPEED;
-            reverse_sickle_i = -1;
-        }
-        reverse_sickle_i++;
-    }
-    count++;
-}
 
 void fan() //風扇 102
 {
