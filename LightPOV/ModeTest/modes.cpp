@@ -1,7 +1,20 @@
 #include "modes.h"
 
+#include "bitmaps.h"
+
 #define LIMIT_OUTPUT(x) ((x)>0xff)?0xff:((x)<0?0:(x))
 
+
+ColorScheduler::ColorScheduler(uint16_t _effect_entry_time, uint8_t defaultV){
+    effect_entry_time = _effect_entry_time;
+    effect_start_idx = 0;
+    defaultValue = defaultV;
+}
+
+
+/************************************
+ *       Scheduler Functions
+ ************************************/
 /* Create ramp-like function 
  *   /     /     upper
  *  /     /
@@ -45,11 +58,6 @@ uint16_t ColorScheduler::calc_pulse(uint16_t idx, uint8_t range, uint8_t lower, 
     return 0xff >> decay;
 }
 
-ColorScheduler::ColorScheduler(time_t _effect_entry_time, uint8_t defaultV){
-    effect_entry_time = _effect_entry_time;
-    defaultValue = defaultV;
-}
-
 void ColorScheduler::SetXHsvParam(ValueParam H, ValueParam S, ValueParam V){
     XHp = H; XSp = S; XVp = V;
 }
@@ -58,6 +66,8 @@ void ColorScheduler::SetYHsvParam(ValueParam H, ValueParam S, ValueParam V){
     YHp = H; YSp = S; YVp = V;
 }
 
+/* Return function value according to the parameter
+ * See also @SchedulerFunc in core.h             */
 uint16_t ColorScheduler::getFuncValue(ValueParam* vp, uint16_t idx, bool overflow){
     switch (vp->func){
         case FuncConst:
@@ -73,21 +83,18 @@ uint16_t ColorScheduler::getFuncValue(ValueParam* vp, uint16_t idx, bool overflo
     }
 }
 
-void ColorScheduler::updateHeading(time_t now_time, time_t last_low_time, bool restart){
-    static time_t delta=0;
-    if (restart)    delta = now_time - last_low_time;
-    else            delta = now_time - effect_entry_time;
+void ColorScheduler::updateHeading(uint16_t idx, bool restart){
+    time_t delta=0;
+    if (restart)    delta = idx - effect_start_idx;
+    else            delta = idx - 0;
 
     headingColor.h = getFuncValue(&XHp, delta);
     headingColor.s = getFuncValue(&XSp, delta);
     headingColor.v = getFuncValue(&XVp, delta);
 }
 
-CRGB inline ColorScheduler::getPixelColor(uint8_t y){/*
-    return CHSV(headingColor.h,
-                headingColor.s,
-                headingColor.v);*/
-    return CHSV(LIMIT_OUTPUT(headingColor.h + getFuncValue(&YHp, y)),
+CRGB inline ColorScheduler::getPixelColor(uint8_t y){
+    return CHSV(headingColor.h + getFuncValue(&YHp, y),
                 LIMIT_OUTPUT(headingColor.s + getFuncValue(&YSp, y)),
                 LIMIT_OUTPUT(headingColor.v + getFuncValue(&YVp, y)));
 }
@@ -107,6 +114,10 @@ void ColorScheduler::getPixelColor(CRGB* pixels){
     }
 }
 
+
+/************************************
+ *        Buffer manutation
+ ************************************/
 Effects::Effects():buffer(sizeof(Mode), QUEUE_SIZE, FIFO),
     sch(millis(), 0){
     effect_id = 0;
@@ -130,19 +141,45 @@ void Effects::feedNewEffect(Mode* m){
             effect_id = 0;
 }
 
-void inline Effects::showLED(){
-    //hsv2rgb_rainbow(pixels, rgb_pixels, NUMPIXELS);
-    FastLED.show();
-}
-
-uint16_t Effects::get_idx(time_t now_time, time_t start_time, time_t interval){
-    return (now_time - start_time) * 0xff / 500;
-}
-
 void Effects::update(){
     detector.update();
 }
 
+/************************************
+ *        Time scheduler
+ ************************************/
+void Effects::setMusicTime(time_t t){
+    last_music_update_time = millis();
+    current_music_time = t;
+}
+
+time_t Effects::getMusicTime(){
+    return current_music_time + (millis() - last_music_update_time);
+}
+
+/*  Perform the effect from buffer */
+void Effects::perform(){
+    if (buffer.isEmpty()) return;
+    Mode m;
+    buffer.peek(&m);
+    if (m.start_time < current_music_time){
+        // Load new mode
+        buffer.pop(&m);
+        Serial.print("Now Performing: ");
+        Serial.println(m.mode);
+        switch(m.mode){
+            case MODES_PLAIN:  plain(&m);  break;
+            case MODES_SQUARE: square(&m); break;
+            case MODES_SICKLE: sickle(&m); break;
+            case MODES_FAN:    fan(&m);    break;
+            default: clear();
+        }
+    }
+}
+
+/************************************
+ *        Effect Helper
+ ************************************/
 /* Block until pass through start position */
 void Effects::blockUntilStart(time_t start, uint16_t timeout){
     time_t start_time = millis();
@@ -159,23 +196,7 @@ bool inline Effects::detectPassStart(time_t start){
     return false;
 }
 
-void Effects::perform(){
-    if (buffer.isEmpty()) return;
-    Mode m;
-    buffer.peek(&m);
-    if (m.start_time < current_music_time){
-        // Load new mode
-        buffer.pop(&m);
-        Serial.print("Now Performing: ");
-        Serial.println(m.mode);
-        switch(m.mode){
-            case MODES_SQUARE: square(&m); break;
-            case MODES_SICKLE: sickle(&m); break;
-            case MODES_FAN:    fan(&m);    break;
-        }
-    }
-}
-
+/* It should be called to initialize the color scheduler */
 void Effects::setEffectStart(Mode* m){
     time_idx = 0;
     effect_entry_time = millis();
@@ -183,59 +204,95 @@ void Effects::setEffectStart(Mode* m){
     sch.SetXHsvParam(m->XH, m->XS, m->XV);
     sch.SetYHsvParam(m->YH, m->YS, m->YV);
 }
+
+void Effects::setEffectBlockStart(){
+    sch.effect_start_idx = time_idx;
+}
+
+/* Get the X direction index while effect performing */
 uint16_t Effects::getIdx(){
     time_idx++;
     return time_idx;
 }
+
+/* Check whether to stop */
 bool Effects::checkDuration(Mode* m){
-    return millis() - effect_entry_time < m->duration;
-    // ||
-    //    current_music_time > m->start_time + m->duration;
+    return millis() - effect_entry_time < m->duration ||
+        getMusicTime() > m->start_time + m->duration;
 }
+
+void inline Effects::showLED(){
+    FastLED.show();
+}
+
+/************************************
+ *              Effects
+ ************************************/
+void Effects::clear(){
+    FastLED.clear();
+    showLED();
+}
+
+void Effects::plain(Mode* m){
+    Serial.println("Plain");
+    setEffectStart(m);
+    while( checkDuration(m) ){
+        uint16_t idx = getIdx();
+        sch.updateHeading(idx);
+        sch.getPixelColor(pixels);
+        showLED();
+    }
+}
+
 /*
  * param[0]: position_fix
  * param[1]: times
  */
 void Effects::square(Mode* m){
     Serial.println("Square");
-    uint8_t position_fix = m->param[0];
-    //uint8_t position_fix = 1;
-    uint8_t times = m->param[1];
-    uint32_t bitmap = 0b11001100110011001100110011001100;
+    uint8_t boxsize = m->param[2];
     setEffectStart(m);
     while( checkDuration(m) ){
-        for (int b=0; b<20; b++){
-            uint16_t idx = getIdx();
-            sch.updateHeading(idx, detector.last_low_time, position_fix);
-            sch.getPixelColor(pixels);
-            /*
-            Serial.print(sch.headingColor.h);
-            Serial.print(",");
-            Serial.print(sch.headingColor.s);
-            Serial.print(",");
-            Serial.print(sch.headingColor.v);
-            Serial.println(",");*/
-            /*
-            for (int a=0; a<NUMPIXELS; a++){
-                Serial.print(rgb_pixels[a].r);
-                Serial.print("|");
-                Serial.print(rgb_pixels[a].g);
-                Serial.print("|");
-                Serial.print(rgb_pixels[a].b);
-                Serial.print(",");
+        setEffectBlockStart();
+        for (int b=1; b<boxsize; b++){
+            uint32_t map = 0;
+
+            uint32_t unit = ((uint32_t)0x1<<b) - 1;
+            for (int k=0; k<boxsize/b; k++)
+                map |= unit << (2*k);
+            
+            for (int j=0; j<boxsize/b; j+=2){
+                uint16_t idx = getIdx();
+                sch.updateHeading(idx);
+                sch.getPixelColor(pixels, map, CHSV(0, 0, 0));
+                showLED();
+                map ^= map;
             }
-                Serial.println(",");*/
-            /*
-            if ( (now_time-sch.effect_entry_time) & 0x10 )
-                sch.getPixelColor(pixels, bitmap, CHSV(0, 0, 0));
-            else
-                sch.getPixelColor(pixels, bitmap>>2, CHSV(0, 0, 0));*/
-            showLED();
         }
-        if (position_fix){
-            FastLED.clear();
-            FastLED.show();
-            blockUntilStart(0, 1000);
+    }
+}
+
+void Effects::boxes(Mode* m){
+    Serial.println("Boxes");
+    uint8_t boxsize = m->param[2];
+    uint8_t space = m->param[3];
+    setEffectStart(m);
+    while( checkDuration(m) ){
+        setEffectBlockStart();
+        for (int b=1; b<boxsize; b++){
+            uint32_t map = 0;
+
+            uint32_t unit = (((uint32_t)0x1<<b) - 1) << ((NUMPIXELS - b)/2);
+            for (int j=0; j<boxsize; j++){
+                uint16_t idx = getIdx();
+                sch.updateHeading(idx);
+                sch.getPixelColor(pixels, !map, CHSV(0, 0, 0));
+                showLED();
+            }
+            for (int j=0; j<space; j++){
+                FastLED.clear();
+                showLED();
+            }
         }
     }
 }
@@ -244,15 +301,21 @@ void Effects::sickle(Mode* m){
     Serial.println("Sickle");
     uint8_t position_fix = m->param[0];
     uint8_t width = m->param[2];
+    uint8_t space = m->param[3];
     setEffectStart(m);
     while( checkDuration(m) ){
+        setEffectBlockStart();
         FastLED.clear();
         for (int b=1; b<width; b++){
             uint16_t idx = getIdx();
-            sch.updateHeading(idx, detector.last_low_time, position_fix);
+            sch.updateHeading(idx);
             uint8_t led_idx = NUMPIXELS * b / width;
             for (int l=(NUMPIXELS * (b-1) / width); l < NUMPIXELS * b / width; l++)
                 pixels[l] = sch.getPixelColor(l);
+            showLED();
+        }
+        for (int j=0; j<space; j++){
+            FastLED.clear();
             showLED();
         }
     }
@@ -268,7 +331,7 @@ void Effects::fan(Mode* m){
     while( checkDuration(m) ){
         for (int w=0; w<width; w++){
             uint16_t idx = getIdx();
-            sch.updateHeading(idx, detector.last_low_time, false);
+            sch.updateHeading(idx);
 
             FastLED.clear();
             uint8_t led_idx = (NUMPIXELS * w / width) % density;
@@ -283,36 +346,27 @@ void Effects::fan(Mode* m){
         }
     }
 }
-/*
 
-
-void fan() //風扇 102
-{
-    if (count == 0)
-    {
-        FastLED.clear();
-    }
-    if (count % SPEED == 0)
-    {
-        FastLED.clear();
-        if (fan_j < 8)
-        {
-            for (int i = fan_j; i < NUMPIXELS; i += 8)
-            {
-                pixels[i] = CRGB(COLOR[0], COLOR[1], COLOR[2]);
-                //pixels.setPixelColor(i, pixels.Color(COLOR[0] * BRIGHTNESS / 100.0, COLOR[1] * BRIGHTNESS / 100.0, COLOR[2] * BRIGHTNESS / 100.0));
-            }
-            FastLED.show();
-            fan_j++;
-        }
-        else
-        {
-            count = -SPEED;
-            fan_j = 0;
+void Effects::bitmap(Mode* m, uint32_t map, uint8_t length, bool reverse){
+    setEffectStart(m);
+    while( checkDuration(m) ){
+        for (int i=0; i<length; i++){
+            uint16_t idx = getIdx();
+            sch.updateHeading(idx);
+            if (reverse)
+                sch.getPixelColor(pixels, !map, CHSV(0, 0, 0));
+            else
+                sch.getPixelColor(pixels, map, CHSV(0, 0, 0));
+            showLED();
         }
     }
-    count++;
 }
+
+void Effects::colormap(Mode* m, uint32_t* map, uint8_t length){
+
+}
+
+/*
 
 //橫版工科
 void es1() //工科 201

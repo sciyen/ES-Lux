@@ -10,7 +10,7 @@
 /* Type Definition */
 #define time_t unsigned long
 
-#define QUEUE_SIZE 20
+#define QUEUE_SIZE 5
 
 /* Pin Configuration */
 #define PIN_LED 18       // Which pin on the Arduino is connected to the NeoPixels?
@@ -29,7 +29,7 @@
 
 #define WIFI_CONNECT_RETRY 20
 
-#define START_TIME_CHECK_INTERVAL 1000
+#define START_TIME_CHECK_INTERVAL 200
 
 /* Rotation Detector */
 #define ROTATION_UPDATE_INTERVAL 1 //ms

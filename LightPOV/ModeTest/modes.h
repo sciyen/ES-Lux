@@ -26,15 +26,20 @@ private:
 
 public:
     CHSV headingColor;
+    /* ------------------
+       |   *   *   *
+     entry s   s   s
+    */
     time_t effect_entry_time;
-    ColorScheduler(time_t _effect_entry_time, uint8_t defaultV=0);
+    uint16_t effect_start_idx;
+    ColorScheduler(uint16_t _effect_entry_time, uint8_t defaultV=0);
 
     void SetXHsvParam(ValueParam H, ValueParam S, ValueParam V);
 
     void SetYHsvParam(ValueParam H, ValueParam S, ValueParam V);
 
     /* Call this function before updating one line */
-    void updateHeading(time_t now_time, time_t last_low_time, bool restart);
+    void updateHeading(uint16_t now_time, bool restart=false);
 
     /* Get single pixel value with y index specified */
     CRGB inline getPixelColor(uint8_t y);
@@ -48,14 +53,15 @@ public:
 
 class Effects{
 private:
-    uint16_t time_idx;
+    time_t current_music_time;
+    time_t last_music_update_time;
+    uint16_t time_idx;      // Effect X direction index
     ColorScheduler sch;
 
     RotationDetector detector;
     CRGB pixels[NUMPIXELS];
-    time_t effect_entry_time;
 
-    inline uint16_t get_idx(time_t now_time, time_t start_time, time_t interval);
+    time_t effect_entry_time;   // The time 
 
     void blockUntilStart(time_t start, uint16_t timeout);
     bool detectPassStart(time_t start);
@@ -63,9 +69,13 @@ private:
     void showLED();
 
 public:
+    /******************************
+     *     Sequential control     *
+     ******************************/
     uint8_t effect_id;
 
-    time_t current_music_time;
+    void setMusicTime(time_t t);
+    time_t getMusicTime();
 
     cppQueue buffer;
 
@@ -86,26 +96,26 @@ public:
 
     /* Helper function */
     void setEffectStart(Mode* m);
+    void setEffectBlockStart();
     uint16_t getIdx();
     bool checkDuration(Mode* m);
 
     /* Effect list */
+    void clear();
+
+    void plain(Mode* m);
+
     void square(Mode* m);
 
     void sickle(Mode* m);
 
     void fan(Mode* m);
+
+    void boxes(Mode* m);
+
+    void bitmap(Mode* m, uint32_t map, uint8_t length, bool reverse=false);
+
+    void colormap(Mode* m, uint32_t* map, uint8_t length);
 };
-/*
-void sickle();
-void reverse_sickle();
-void fan();
-void es1();
-void es2();
-void rev_es1();
-void fire_staff();
-void star();
-void rainbow();
-void lightning();*/
 
 #endif

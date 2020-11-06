@@ -8,7 +8,7 @@
 #include "config.h"
 
 
-enum MODES{MODES_SQUARE=0, MODES_SICKLE, MODES_FAN};
+enum MODES{MODES_CLEAR=0, MODES_PLAIN, MODES_SQUARE, MODES_SICKLE, MODES_FAN, MODE_BOXES};
 enum SchedulerFunc{FuncNone, FuncConst, FuncRamp, FuncTri, FuncPulse};
 
 typedef struct _ValueParam{
