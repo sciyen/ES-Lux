@@ -1,7 +1,5 @@
 #include "modes.h"
 
-#include "bitmaps.h"
-
 #define LIMIT_OUTPUT(x) ((x)>0xff)?0xff:((x)<0?0:(x))
 
 
@@ -114,6 +112,15 @@ void ColorScheduler::getPixelColor(CRGB* pixels){
     }
 }
 
+void ColorScheduler::getPixelColor(CRGB* pixels, const uint16_t* colormap){
+    for( uint8_t i=0; i<NUMPIXELS; i++){
+        pixels[i] = CHSV(
+            colormap[i] >> 7 & 0xf8,
+            colormap[i] >> 2 & 0xf8,
+            colormap[i] << 3 & 0xf8
+        );
+    }
+}
 
 /************************************
  *        Buffer manutation
@@ -137,7 +144,7 @@ void Effects::feedNewEffect(Mode* m){
     if (buffer.push(m) )
         effect_id += 1;
         Serial.println("Pushed");
-        if (effect_id >= 3)
+        if (effect_id >= 100)
             effect_id = 0;
 }
 
@@ -162,7 +169,7 @@ void Effects::perform(){
     if (buffer.isEmpty()) return;
     Mode m;
     buffer.peek(&m);
-    if (m.start_time < current_music_time){
+    if (m.start_time < current_music_time || force_start){
         // Load new mode
         buffer.pop(&m);
         Serial.print("Now Performing: ");
@@ -172,7 +179,15 @@ void Effects::perform(){
             case MODES_SQUARE: square(&m); break;
             case MODES_SICKLE: sickle(&m); break;
             case MODES_FAN:    fan(&m);    break;
-            default: clear();
+            case MODES_BOXES:  boxes(&m);  break;
+            case MODES_MAP_ES:     bitmapEs(&m);    break;
+            case MODES_MAP_ES_ZH:  bitmapEsZh(&m);    break;
+            case MODES_CMAP_DNA:    colormapDna(&m);    break;
+            case MODES_CMAP_BENSON: colormapBenson(&m);    break;
+            case MODES_CMAP_YEN:    colormapYen(&m);       break;
+            case MODES_CMAP_LOVE:   colormapLove(&m);      break;
+            case MODES_CMAP_GEAR:   colormapGear(&m);      break;
+            default: clear(); break;
         }
     }
 }
@@ -217,8 +232,11 @@ uint16_t Effects::getIdx(){
 
 /* Check whether to stop */
 bool Effects::checkDuration(Mode* m){
-    return millis() - effect_entry_time < m->duration ||
-        getMusicTime() > m->start_time + m->duration;
+    Serial.println(getMusicTime());
+    return millis() - effect_entry_time < m->duration/*
+    || getMusicTime() > m->start_time + m->duration*/;
+    /* ||
+        (!force_start && getMusicTime() > m->start_time + m->duration)*/;
 }
 
 void inline Effects::showLED(){
@@ -245,8 +263,8 @@ void Effects::plain(Mode* m){
 }
 
 /*
- * param[0]: position_fix
- * param[1]: times
+ * p3: boxsize
+ * p4: space
  */
 void Effects::square(Mode* m){
     Serial.println("Square");
@@ -283,10 +301,10 @@ void Effects::boxes(Mode* m){
             uint32_t map = 0;
 
             uint32_t unit = (((uint32_t)0x1<<b) - 1) << ((NUMPIXELS - b)/2);
-            for (int j=0; j<boxsize; j++){
+            for (int j=0; j<boxsize/2; j++){
                 uint16_t idx = getIdx();
                 sch.updateHeading(idx);
-                sch.getPixelColor(pixels, !map, CHSV(0, 0, 0));
+                sch.getPixelColor(pixels, unit, CHSV(0, 0, 0));
                 showLED();
             }
             for (int j=0; j<space; j++){
@@ -347,23 +365,80 @@ void Effects::fan(Mode* m){
     }
 }
 
-void Effects::bitmap(Mode* m, uint32_t map, uint8_t length, bool reverse){
+/* p1: reverse
+ * p4: space
+ */
+void Effects::bitmap(Mode* m, const uint32_t* map, int length){
+    uint8_t reverse = m->param[0];
+    uint8_t space = m->param[3];
     setEffectStart(m);
     while( checkDuration(m) ){
-        for (int i=0; i<length; i++){
+        for (int i=length-1; i>=0; i--){
             uint16_t idx = getIdx();
             sch.updateHeading(idx);
             if (reverse)
-                sch.getPixelColor(pixels, !map, CHSV(0, 0, 0));
+                sch.getPixelColor(pixels, ~map[i], CHSV(0, 200, 0));
             else
-                sch.getPixelColor(pixels, map, CHSV(0, 0, 0));
+                sch.getPixelColor(pixels, map[i], CHSV(0, 200, 0));
+            showLED();
+        }
+        for (int j=0; j<space; j++){
+            FastLED.clear();
             showLED();
         }
     }
 }
 
-void Effects::colormap(Mode* m, uint32_t* map, uint8_t length){
+void Effects::bitmapEs(Mode* m){
+    bitmap(m, BITMAP_ES, BITMAP_SIZE_ES);
+}
 
+/*
+ */
+void Effects::bitmapEsZh(Mode* m){
+    uint8_t reverse = m->param[0];
+    bitmap(m, BITMAP_ES_ZH, BITMAP_SIZE_ES_ZH);
+}
+
+/* 
+ * p4: space
+ */
+void Effects::colormap(Mode* m, const uint16_t (*map)[NUMPIXELS], int length){
+    uint8_t space = m->param[3];
+    setEffectStart(m);
+    while( checkDuration(m) ){
+        for (int i=0; i<length; i++){
+            uint16_t idx = getIdx();
+            sch.updateHeading(idx);
+            sch.getPixelColor(pixels, map[i]);
+            showLED();
+        }
+        for (int j=0; j<space; j++){
+            FastLED.clear();
+            showLED();
+        }
+    }
+}
+
+void Effects::colormapDna(Mode* m){
+    uint8_t reverse = m->param[0];
+    colormap(m, BITMAP_DNA, BITMAP_SIZE_DNA);
+}
+
+void Effects::colormapBenson(Mode* m){
+    bitmap(m, BENSON, BITMAP_SIZE_BENSON);
+}
+
+void Effects::colormapYen(Mode* m){
+    bitmap(m, YEN, BITMAP_SIZE_YEN);
+}
+
+void Effects::colormapLove(Mode* m){
+    bitmap(m, LOVE, BITMAP_SIZE_LOVE);
+}
+
+void Effects::colormapGear(Mode* m){
+    colormap(m, GEAR, BITMAP_SIZE_GEAR);
 }
 
 /*

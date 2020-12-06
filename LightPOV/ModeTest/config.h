@@ -5,7 +5,7 @@
 #define DEBUGGER
 #define DEBUGGER_TASK_REPORT
 
-#define LUX_ID 0
+#define LUX_ID 1
 
 /* Type Definition */
 #define time_t unsigned long
@@ -19,8 +19,8 @@
 /* Network configuration */ 
 #define WIFI_SSID1 "Benson"
 #define WIFI_PASS1 "0932209548"
-#define WIFI_SSID2 "2.4G"
-#define WIFI_PASS2 "12345qwert"
+#define WIFI_SSID2 "yen"
+#define WIFI_PASS2 "0905026157"
 #define WIFI_SSID3 "NCKUES[AUTO]"
 #define WIFI_PASS3 "nckues_auto"
 
@@ -29,7 +29,9 @@
 
 #define WIFI_CONNECT_RETRY 20
 
-#define START_TIME_CHECK_INTERVAL 200
+#define START_TIME_CHECK_INTERVAL 100
+
+#define FORCE_START_MODE true
 
 /* Rotation Detector */
 #define ROTATION_UPDATE_INTERVAL 1 //ms

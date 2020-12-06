@@ -4,6 +4,7 @@
 #include <FastLED.h>
 #include <cppQueue.h>
 #include "config.h"
+#include "bitmaps.h"
 #include "core.h"
 #include "acc.h"
 
@@ -45,10 +46,12 @@ public:
     CRGB inline getPixelColor(uint8_t y);
 
     /* Get one line pixel array with bitmap specified */
-    void getPixelColor(CRGB* pixels, uint32_t bitmap, CHSV replace);
+    void getPixelColor(CRGB* pixels, const uint32_t bitmap, CHSV replace);
 
     /* Get one line pixel array */
     void getPixelColor(CRGB* pixels);
+
+    void getPixelColor(CRGB* pixels, const uint16_t* colormap);
 };
 
 class Effects{
@@ -73,6 +76,7 @@ public:
      *     Sequential control     *
      ******************************/
     uint8_t effect_id;
+    uint8_t force_start;
 
     void setMusicTime(time_t t);
     time_t getMusicTime();
@@ -113,9 +117,23 @@ public:
 
     void boxes(Mode* m);
 
-    void bitmap(Mode* m, uint32_t map, uint8_t length, bool reverse=false);
+    void bitmap(Mode* m, const uint32_t* map, int length);
 
-    void colormap(Mode* m, uint32_t* map, uint8_t length);
+    void colormap(Mode* m, const uint16_t (*map)[NUMPIXELS], int length);
+
+    void bitmapEs(Mode* m);
+
+    void bitmapEsZh(Mode* m);
+
+    void colormapDna(Mode* m);
+
+    void colormapBenson(Mode* m);
+
+    void colormapYen(Mode* m);
+
+    void colormapLove(Mode* m);
+
+    void colormapGear(Mode* m);
 };
 
 #endif

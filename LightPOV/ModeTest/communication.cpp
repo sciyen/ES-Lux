@@ -216,15 +216,19 @@ bool Communication::receive(Mode* m, int current_id){
     return true;
 }
 
-time_t Communication::check_start_time(uint8_t id, MODES mode){
+time_t Communication::check_start_time(uint8_t id, MODES mode, uint8_t* force_start){
     if (WiFi.status() == WL_CONNECTED){
         /* Request data from server */
         String url = String(WIFI_TIME_CHECK_URL) + "?id=" + id + "&effect=" + mode;
         http.begin(url);
         int httpCode = http.GET();
         String web_data = http.getString();
+        if (web_data[0] == 'A')
+            *force_start = 0;
+        else
+            *force_start = 1; 
         http.end();
-        return web_data.toInt();
+        return web_data.substring(1).toInt();
     }
     else WifiErrorHandle();
     return 0;
