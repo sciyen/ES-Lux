@@ -1,0 +1,79 @@
+{
+    "Modes": [
+        {
+            "Name": "Clear",
+            "StartTime": "Time",
+            "Duration": "Time",
+            "HSV": "HSV"
+        },
+        {
+            "Name": "Plain",
+            "StartTime": "Time",
+            "Duration": "Time",
+            "HSV": "HSV"
+        },
+        {
+            "Name": "CMap",
+            "StartTime": "Time",
+            "Duration": "Time",
+            "HSV": "HSV",
+            "Pattern": [
+                "DNA",
+                "Fire"
+            ]
+        }
+    ],
+    "HSV": {
+        "Color": "Color",
+        "HFunction": "Function",
+        "SFunction": "Function",
+        "VFunction": "Function"
+    },
+    "Function": [
+        {
+            "Name": "Constant",
+            "Value": {
+                "Number": {
+                    "LowerLimit": 0,
+                    "UpperLimit": 255
+                }
+            }
+        },
+        {
+            "Name": "Ramp",
+            "LowerValue": {
+                "Number": {
+                    "LowerLimit": 0,
+                    "UpperLimit": 255
+                }
+            },
+            "UpperValue": "Number",
+            "Range": "Number",
+            "Comment": ""
+        },
+        {
+            "Name": "Triangle",
+            "ValueRange": "Range",
+            "Range": "Number",
+            "Comment": ""
+        },
+        {
+            "Name": "Pulse",
+            "LowerValue": "Number",
+            "TopValue": "Number",
+            "Range": "Number",
+            "Comment": ""
+        },
+        {
+            "Name": "Step",
+            "LowerValue": "Number",
+            "UpperValue": "Number",
+            "Range": "Number",
+            "Comment": ""
+        }
+    ],
+    "RenderingMethod": [
+        "Number",
+        "Range"
+    ]
+}
