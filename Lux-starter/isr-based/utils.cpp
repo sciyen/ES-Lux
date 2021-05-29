@@ -79,6 +79,22 @@ void show_bitmap_fire()
     }
 }
 
+void show_bitmap_logo()
+{
+    for (int i = 0; i < NUM_BITMAP_LOGO; i++) {
+        uint8_t R, G, B;
+        for (int h = 0; h < NUM_LEDS; h++) {
+            R = ((LOGO[i][h] >> 6) & B111);
+            G = ((LOGO[i][h] >> 3) & B111);
+            B = ((LOGO[i][h]) & B111);
+            led_map[h][0] = 7 - R;
+            led_map[h][1] = 7 - G;
+            led_map[h][2] = 7 - B;
+        }
+        delay(1);
+    }
+}
+
 void ISR_enable()
 {
     // atmega 328p timer register setting
