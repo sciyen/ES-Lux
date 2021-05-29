@@ -63,35 +63,19 @@ void show_hsv_demo()
     }
 }
 
-void show_bitmap_fire()
-{
-    for (int i = 0; i < NUM_BITMAP_FIRE; i++) {
-        uint8_t R, G, B;
-        for (int h = 0; h < NUM_LEDS; h++) {
-            uint16_t H = (((FIRE[i][h]) >> 10) & 0x1F) * 11;
-            float S = (((FIRE[i][h]) >> 5) & 0x1F) / 32.0;
-            float V = ((FIRE[i][h]) & 0x1F) / 32.0;
-            set_hsl(H, S, V - 0.5f, &R, &G, &B);
-            led_map[15 - h][0] = R;
-            led_map[15 - h][1] = G;
-            led_map[15 - h][2] = B;
-        }
-    }
-}
-
 void show_bitmap_logo()
 {
-    for (int i = 0; i < NUM_BITMAP_LOGO; i++) {
+    for (int i = 0; i < 8; i++) {
         uint8_t R, G, B;
         for (int h = 0; h < NUM_LEDS; h++) {
             R = ((LOGO[i][h] >> 6) & B111);
             G = ((LOGO[i][h] >> 3) & B111);
             B = ((LOGO[i][h]) & B111);
-            led_map[h][0] = 7 - R;
-            led_map[h][1] = 7 - G;
-            led_map[h][2] = 7 - B;
+            led_map[h][0] = 8 - R;
+            led_map[h][1] = 8 - G;
+            led_map[h][2] = 8 - B;
         }
-        delay(1);
+        delay(2);
     }
 }
 

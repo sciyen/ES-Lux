@@ -1,5 +1,3 @@
-
-
 #include "utils.h"
 
 #define PIN_ENABLE 10
@@ -7,7 +5,6 @@
 #define PIN_DATA 11
 
 extern volatile uint8_t led_map[NUM_LEDS][3];
-char str[] = "NCKU ES";
 
 void setup()
 {
@@ -30,19 +27,32 @@ void setup()
 int16_t color = 0;
 void loop()
 {
-    for (int u = 7; u >= 0; u--) {
-        for (int i = 0; i < NUM_LEDS; i++) {
-            for (int k = 0; k < 3; k++) {
-                led_map[i][k] = u;
-            }
-        }
-        delay(200);
-    }
-
     show_hsv_demo();
 
+    for (int x = 0; x < 200; x++)
+        show_bitmap_logo();
+
+    uint8_t R, G, B;
+    for (int x = 0; x < 1000; x++) {
+        set_hsl(x % 360, 1, 0.5, &R, &G, &B);
+        for (int y = 0; y < NUM_LEDS; y++) {
+            if ((y - (12 + 3 * sin(2 * 3.14 * x / 16)) <= 0) &&
+                (y - (3 + 3 * sin(2 * 3.14 * x / 16)) >= 0)) {
+                led_map[y][0] = R;
+                led_map[y][1] = G;
+                led_map[y][2] = B;
+            } else {
+                led_map[y][0] = 8;
+                led_map[y][1] = 8;
+                led_map[y][2] = 8;
+            }
+        }
+        delay(1);
+    }
+
     for (int i = 0; i < 20; i++) {
-        color = (color + get_len(str) * 4) % 360;
+        char str[] = "NCKU ES!";
+        color = (color + get_len(str) * 8) % 360;
         show_str(str, color, 1, 10);
     }
 }

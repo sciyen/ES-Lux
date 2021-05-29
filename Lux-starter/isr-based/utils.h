@@ -27,8 +27,6 @@ void show_str(char *str,
 
 void show_hsv_demo();
 
-void show_bitmap_fire();
-
 void show_bitmap_logo();
 
 float hue_to_rgb(float v1, float v2, float vH);
