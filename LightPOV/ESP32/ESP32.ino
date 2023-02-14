@@ -1,40 +1,18 @@
+#include "core.h"
 #include "config.h"
 #include "modes.h"
 #include "communication.h"
-#include "acc.h"
-
-CRGB pixels[NUMPIXELS];
-float BRIGHTNESS = 100;              // 0 is darkest, 100 is brightest
-int SPEED = 100;                     // 1 is slowest, 100 is fastest
-float COLOR[3] = {255, 255, 255};    //R, G, B
-int R = 250, G = 0, B = 0;           //for rainbow mode use
-bool R_rise = false, R_fall = false; //for rainbow mode use
-bool G_rise = false, G_fall = false; //for rainbow mode use
-bool B_rise = false, B_fall = false; //for rainbow mode use
-
-int AcX, AcY, AcZ, Tmp, GyX, GyY, GyZ; //MPU6050
-
-int light_stat = 101;
-int last_state;
-int count = 0;
-
-String data;
-String url;
-int httpCode;
-String web_data;
-HTTPClient http;
 
 TaskHandle_t LED_UPDATE;
 TaskHandle_t WIFI_HANDLE;
 
-void setup()
-{
+Effects effect = Effects();
+Communication comm = Communication();
+void setup(){
     Serial.begin(115200);
-    FastLED.addLeds<WS2812B, PIN, GRB>(pixels, NUMPIXELS);
-    fire_staff();
-    wifi_connect();
-    OTA();
-    mpu_init();
+    Serial.println("Start up");
+
+    comm.init();
 
     xTaskCreatePinnedToCore(
         WIFI_HANDLE_CODE,
@@ -45,7 +23,7 @@ void setup()
         &WIFI_HANDLE,
         0);
     delay(100);
-
+    
     xTaskCreatePinnedToCore(
         LED_UPDATE_CODE, // Function to implement the task
         "led_update",    // Name of the task
@@ -59,131 +37,59 @@ void setup()
 
 void LED_UPDATE_CODE(void *pvParameters)
 {
-    Serial.print("Task0 running on core ");
-    Serial.println(xPortGetCoreID());
-    int mpu_count = 0;
-    while (1)
-    {
-        FastLED.setBrightness(BRIGHTNESS);
-        if (light_stat != last_state)
-        {
-            last_state = light_stat;
-            FastLED.clear();
-            FastLED.show();
-            count = 0;
-        }
-        if (light_stat == 0)
-        {
-            digitalWrite(2, HIGH);
-            FastLED.clear();
-            FastLED.show();
-        }
-        else if (light_stat == 1)
-        {
-            digitalWrite(2, LOW);
-            for (int i = 0; i < NUMPIXELS; i++)
-            {
-                pixels[i] = CRGB(COLOR[0], COLOR[1], COLOR[2]);
-                //pixels.setPixelColor(i, pixels.Color(COLOR[0] * BRIGHTNESS / 100.0, COLOR[1] * BRIGHTNESS / 100.0, COLOR[2] * BRIGHTNESS / 100.0));
-            }
-            FastLED.show();
-        }
-        else if (light_stat == 101)
-        {
-            sickle();
-        }
-        else if (light_stat == 111)
-        {
-            reverse_sickle();
-        }
-        else if (light_stat == 102)
-        {
-            fan();
-        }
-        else if (light_stat == 103)
-        {
-            fire_staff();
-        }
-        else if (light_stat == 203)
-        {
-            star();
-        }
-        else if (light_stat == 104)
-        {
-            R > 250 ? R = 250 : 1;
-            G > 250 ? G = 250 : 1;
-            B > 250 ? B = 250 : 1;
-            R < 0 ? R = 0 : 1;
-            G < 0 ? G = 0 : 1;
-            B < 0 ? B = 0 : 1;
-            rainbow();
-        }
-        else if (light_stat == 201)
-        {
-            es1();
-        }
-        else if (light_stat == 211)
-        {
-            rev_es1();
-        }
-        else if (light_stat == 202)
-        {
-            es2();
-        }
-        else if (light_stat == 204)
-        {
-            lightning();
-        }
-
-        //MPU6050
-        if (mpu_count % 10 == 0)
-        {
-            mpu_count = 0;
-            mpu_read();
-            //Serial.print("Accelerometer Values: ");
-            /*Serial.print("AcX: ");
-            Serial.print(AcX);
-            Serial.print(" AcY: ");
-            Serial.print(AcY);
-            Serial.print(" AcZ: ");
-            Serial.print(AcZ);
-            Serial.print(" Temperature: ");
-            Serial.print(Tmp);
-            //Serial.print(" Gyroscope Values: \n");
-            Serial.print(" GyX: ");
-            Serial.print(GyX);
-            Serial.print(" GyY: ");
-            Serial.print(GyY);
-            Serial.print(" GyZ: ");
-            Serial.print(GyZ);
-            Serial.print("\n");*/
-        }
-        mpu_count++;
-        //delayMicroseconds(100);
-        //delay(10);
-        //Serial.println(light_stat);
-        //Serial.println("test");
+    /*
+    ValueParam p1 = (ValueParam){.func=FuncRamp, .range=100, .lower=0, .p1=250, .p2=0};
+    ValueParam p2 = (ValueParam){.func=FuncConst, .range=1, .lower=0, .p1=100, .p2=0};
+    ValueParam p3 = (ValueParam){.func=FuncConst, .range=1, .lower=0, .p1=0, .p2=0};
+    ValueParam p4 = (ValueParam){.func=FuncConst, .range=1, .lower=0, .p1=255, .p2=0};
+    ValueParam p5 = (ValueParam){.func=FuncTri, .range=100, .lower=0, .p1=100, .p2=0};
+    ValueParam p6 = (ValueParam){.func=FuncPulse, .range=100, .lower=0, .p1=5, .p2=0};
+    Mode m;
+    m.XH = p1;
+    m.XS = p4;
+    m.XV = p2;
+    m.YH = p3;
+    m.YS = p3;
+    m.YV = p3;
+    m.param[0] = 1;
+    m.param[1] = 10;*/
+    while (1){
+        //effect.square(&m);
+        effect.perform();
     }
 }
 
-//vTaskDelete(NULL);
 void WIFI_HANDLE_CODE(void *pvParameters)
 {
+    time_t last_check_time = millis();
     Serial.print("Task1 running on core ");
     Serial.println(xPortGetCoreID());
     while (1)
     {
-        /*if (Serial.available())
-        {
-            light_stat = Serial.parseInt();
+        uint8_t current_id = effect.checkBufferAvailable();
+        if (current_id >= 0){
+            Mode m;
+            if ( comm.receive(&m, current_id) ){
+                effect.feedNewEffect(&m);
+            }
+            #ifdef DEBUGGER_TASK_REPORT
+            else
+                Serial.println("Failed to receive from server");
+            #endif
         }
-        delay(10);*/
-        get_data();
+
+        if (millis() - last_check_time > START_TIME_CHECK_INTERVAL){
+            Mode m;
+            effect.buffer.peek(&m);
+            effect.setMusicTime( comm.check_start_time(LUX_ID, m.mode, &effect.force_start) );
+            last_check_time = millis();
+        }
         delay(10);
     }
 }
 
 void loop()
 {
-    ArduinoOTA.handle();
+    comm.updateOTA();
+    effect.update();
 }
