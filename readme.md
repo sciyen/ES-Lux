@@ -8,16 +8,19 @@ This is a series of projects about LED performing arts, which was launched by NC
 
 
 <table style="table-layout: fixed">
-<tr><th>Lux-Starter</th><th>Lux-Starter</th><th>LightBall</th>LightPOV</tr>
 <tr>
-<td><a href="https://imgur.com/E7q4vUQ"><img src="https://i.imgur.com/E7q4vUQ.jpg" title="Lux-Starter" style="width:300px"/></a></td>
-<td><a href="https://imgur.com/lLIcmP5"><img src="https://i.imgur.com/lLIcmP5.jpg" title="Light Ball"  style="width:300px"/></a></td>
-<td><a href="https://imgur.com/d53zrUp"><img src="https://i.imgur.com/d53zrUp.jpg" title="source: imgur.com"  style="width:300px"/></a></td>
+  <th>Lux-Starter</th>
+  <th>LightBall</th>
+  <tr>LightPOV</tr>
+<tr>
+  <td><a href="https://imgur.com/E7q4vUQ"><img src="https://i.imgur.com/E7q4vUQ.jpg" title="Lux-Starter" style="width:300px"/></a></td>
+  <td><a href="https://imgur.com/lLIcmP5"><img src="https://i.imgur.com/lLIcmP5.jpg" title="Light Ball"  style="width:300px"/></a></td>
+  <td><a href="https://imgur.com/d53zrUp"><img src="https://i.imgur.com/d53zrUp.jpg" title="Light POV"  style="width:300px"/></a></td>
 </tr>
 <tr>
-<td></td>
-<td><a href="https://youtu.be/oVoUZH0_7GY">YouTube</a></td>
-<td><a href="https://youtu.be/g5vR8DxKb7g">YouTube</a></td>
+  <td></td>
+  <td><a href="https://youtu.be/oVoUZH0_7GY">YouTube</a></td>
+  <td><a href="https://youtu.be/g5vR8DxKb7g">YouTube</a></td>
 </tr>
 </table>
 
