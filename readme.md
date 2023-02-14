@@ -11,7 +11,8 @@ This is a series of projects about LED performing arts, which was launched by NC
 <tr>
   <th>Lux-Starter</th>
   <th>LightBall</th>
-  <tr>LightPOV</tr>
+  <th>LightPOV</th>
+</tr>
 <tr>
   <td><a href="https://imgur.com/E7q4vUQ"><img src="https://i.imgur.com/E7q4vUQ.jpg" title="Lux-Starter" style="width:300px"/></a></td>
   <td><a href="https://imgur.com/lLIcmP5"><img src="https://i.imgur.com/lLIcmP5.jpg" title="Light Ball"  style="width:300px"/></a></td>
