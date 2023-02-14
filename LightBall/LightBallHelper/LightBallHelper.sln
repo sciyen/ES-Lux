@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29102.190
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LightBallHelper", "LightBallHelper\LightBallHelper.csproj", "{6878D59F-4F9A-45BE-B693-3313ED83AF94}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WaveFormRendererLib", "WaveFormRendererLib\WaveFormRendererLib.csproj", "{3EFEF2D1-5D08-46FD-AF6D-098DBE7FB3B4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6878D59F-4F9A-45BE-B693-3313ED83AF94}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6878D59F-4F9A-45BE-B693-3313ED83AF94}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6878D59F-4F9A-45BE-B693-3313ED83AF94}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6878D59F-4F9A-45BE-B693-3313ED83AF94}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EFEF2D1-5D08-46FD-AF6D-098DBE7FB3B4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EFEF2D1-5D08-46FD-AF6D-098DBE7FB3B4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EFEF2D1-5D08-46FD-AF6D-098DBE7FB3B4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EFEF2D1-5D08-46FD-AF6D-098DBE7FB3B4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F5671683-28DE-431E-AFAD-5E4BA7D4F49E}
+	EndGlobalSection
+EndGlobal

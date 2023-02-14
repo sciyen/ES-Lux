@@ -1,0 +1,9 @@
+#define LM_EMPTY 0
+#define LM_SET_CLOSE 1
+#define LM_SET_RGB 2
+#define LM_SET_HSL 3
+#define LM_SET_HSL_PROGRESSIVE 4
+#define LM_SET_HSL_SPARK_ASYNC 5
+#define LM_SET_HSL_SPARK_SYNC 6
+#define LM_SET_HSL_METEOR_ASYNC 7
+#define LM_SET_HSL_METEOR_SYNC 8

@@ -1,0 +1,17 @@
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\LightBallHelper.exe.config
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\LightBallHelper.exe
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\LightBallHelper.pdb
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.csprojAssemblyReference.cache
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.Properties.Resources.resources
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.csproj.GenerateResource.cache
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.csproj.CoreCompileInputs.cache
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.exe
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.pdb
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\NAudio.dll
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\NAudio.xml
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.LightBallHelper.resources
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.csproj.CopyComplete
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\WaveFormRendererLib.dll
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\bin\Debug\WaveFormRendererLib.pdb
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.Resource1.resources
+G:\DIYnew\LightBall\LightBallHelper\LightBallHelper\obj\Debug\LightBallHelper.ColorBar.resources

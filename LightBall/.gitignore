@@ -1,0 +1,7 @@
+*.cache
+__pycache__
+*.swp
+*wav
+*.mp3
+*.lock
+*.vs
