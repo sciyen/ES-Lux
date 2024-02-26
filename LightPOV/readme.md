@@ -1,4 +1,4 @@
-# Light POV
+# Light POV (光蛇)
 
 ## Important Features
 - Using `Effects` to manage the displaying time of an effect.
@@ -9,7 +9,13 @@
 
 ## Project file structure
 ```
-├── ESP32                       : Main program project
+├── ControlPanel                : Web server for controlling the POV
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── public                  : Web front-end
+│   ├── readme.md
+│   └── server.js               : Web main server
+├── ESP32                       : Program for ESP32
 │   ├── ESP32.ino               : Main program code
 │   ├── acc.cpp                 : 
 │   ├── acc.h                   : Accelerometer module
@@ -34,9 +40,9 @@
 ```
 
 ## The hardware 
-The schematic was not recorded.
-- ESP32
-- WS2812 
-- 18650 battery
+The schematic is an unrecorded artifact. The hardware is a simple design with an ESP32, a WS2812 LED strip, and a 18650 battery. 
+Maybe schematics and PCB layouts will be added in the future.
 
 ## Welcome for Contribution
+If you are interested in this project, feel free to contribute to this project.
+If you have any questions, please open an issue or contact @sciyen via sciyen.ycc@gmail.com .
